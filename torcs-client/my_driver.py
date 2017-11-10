@@ -51,6 +51,8 @@ class MyDriver(Driver):
         print('self dist from start', self.distance_from_start)
         print('dist from start', carstate.distance_from_start)
         print('damage = ', carstate.damage)
+        print('rpm = ', carstate.rpm)
+        print('gear = ', carstate.gear)
         
         self.distance = carstate.distance_raced
         #if self.curr_time > carstate.current_lap_time:
@@ -70,8 +72,6 @@ class MyDriver(Driver):
         try:
             output = self.net.activate(input)
             
-            for i in range(len(output)):
-                output[i] = max(0, output[i])
             
             print('Out = ' + str(output))
             

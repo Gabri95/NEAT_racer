@@ -14,3 +14,4 @@ neat/*
 !neat/src/
 neatsociety/__pycache__
 neatsociety/nn/__pycache__
+model.pickle

@@ -21,7 +21,6 @@ sys.path.insert(0, '../')
 
 import neatsociety
 from neatsociety import nn, population, statistics, visualize, parallel, activation_functions
-from neatsociety.reporting import StdOutReporter
 
 best = 0
 
@@ -67,16 +66,30 @@ def eval_fitness(genomes):
     print('\n... finished evaluation\n\n')
 
 
-def run():
+def run(generations=20, frequency=None, output_dir=None, checkpoint=None):
     
+    if frequency is None:
+        frequency = generations
+        
     local_dir = os.path.dirname(__file__)
     pop = population.Population(os.path.join(local_dir, 'nn_config'))
-
-    #pop.add_reporter(StdOutReporter())
     
-    #pe = parallel.ParallelEvaluator(eval_fitness, num_workers=1)
-    #pop.run(pe.evaluate, 30)
-    pop.run(eval_fitness, 2)
+    if checkpoint is not None:
+        print('Loading from ', checkpoint)
+        pop.load_checkpoint(checkpoint)
+    
+    generations_done = 0
+    while generations_done < generations:
+        
+        generations_to_do = min(frequency, generations - generations_done)
+        
+        pop.run(eval_fitness, generations_to_do)
+        
+        generations_done += generations_to_do
+        
+        if output_dir is not None:
+            print('Storing to ', checkpoint)
+            pop.save_checkpoint(os.path.join(output_dir, 'neat_gen_{}.checkpoint'.format(pop.generation)))
     
     print('Number of evaluations: {0}'.format(pop.total_evaluations))
 
@@ -96,4 +109,36 @@ def run():
     statistics.save_species_fitness(pop.statistics)
 
 if __name__ == '__main__':
-    run()
+    parser = argparse.ArgumentParser(
+        description='NEAT algorithm'
+    )
+    parser.add_argument(
+        '-c',
+        '--checkpoint',
+        help='Checkpoint file',
+        type=str
+    )
+    parser.add_argument(
+        '-g',
+        '--generations',
+        help='Number of generations to train',
+        type=int
+    )
+
+    parser.add_argument(
+        '-f',
+        '--frequency',
+        help='How often to store checkpoints',
+        type=int
+    )
+    
+    parser.add_argument(
+        '-o',
+        '--output_dir',
+        help='Directory where to store checkpoint.',
+        type=str
+    )
+    
+    args, _ = parser.parse_known_args()
+    
+    run(**args.__dict__)
