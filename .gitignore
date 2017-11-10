@@ -12,5 +12,5 @@ model_results
 debug
 neat
 !neat/src
-!neat/evolve.sh
-
+neatsociety/__pycache
+neatsociety/nn/__pycache__
