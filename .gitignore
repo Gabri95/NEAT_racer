@@ -6,10 +6,11 @@ torcs-client/output/
 torcs-client/pytocl/__pycache__/
 torcs-client/*_err.txt
 torcs-client/*_out.txt
-torcs-server/
-train_data/
-model_results/
-debug/
+torcs-server/*
+!torcs-server/torcs_tournament.py
+train_data/*
+model_results/*
+debug/*
 neat/*
 !neat/src/
 neatsociety/__pycache__

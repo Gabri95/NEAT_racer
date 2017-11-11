@@ -78,6 +78,7 @@ def get_best_genome(population):
                 best = g
     return best
 
+
 def run(generations=20, frequency=None, output_dir=None, checkpoint=None):
     
     if frequency is None:
