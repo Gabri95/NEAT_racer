@@ -152,7 +152,10 @@ class State(Value):
         
         
         for j in range(19):
-            array.append(self.distances_from_edge[j]/200.0)
+            if math.fabs(self.distance_from_center) > 1:
+              array.append(-1)
+            else:
+              array.append(self.distances_from_edge[j]/200.0)
 
         array.append(self.distance_from_center)
 
