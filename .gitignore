@@ -9,7 +9,6 @@ torcs-client/*_out.txt
 torcs-server/*
 !torcs-server/torcs_tournament.py
 train_data/*
-model_results/*
 debug/*
 neat/*
 !neat/src/
