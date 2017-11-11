@@ -145,7 +145,8 @@ if __name__ == '__main__':
         '-g',
         '--generations',
         help='Number of generations to train',
-        type=int
+        type=int,
+        default=10
     )
 
     parser.add_argument(
