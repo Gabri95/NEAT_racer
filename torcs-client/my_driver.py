@@ -3,7 +3,7 @@ from pytocl.car import State, Command
 from model import *
 import pickle
 import math
-
+import time as tm
 import sys
 sys.path.insert(0, '../')
 
@@ -32,6 +32,7 @@ class MyDriver(Driver):
         self.iterations_count = 0
         self.avg_speed = 0
         self.z = 0
+        self.stopped = False
         
         print('Driver initialization completed')
        
@@ -45,9 +46,23 @@ class MyDriver(Driver):
         """
         print('Drive')
         input = carstate.to_input_array()
+        
+        
+        
+        
+        if np.isnan(input).any():
+            if not self.stopped:
+                self.saveResults()
+            
+            print(input)
+            print('NaN INPUTS!!! STOP WORKING')
+            return Command()
 
+        self.stopped = np.isnan(input).any()
+        
+        
         projected_speed = get_projected_speed(carstate.speed_x, carstate.speed_y, carstate.angle)
-
+        print(tm.ctime())
         print('distance raced = ', carstate.distance_raced)
         # print('distances = ', carstate.distances_from_edge)
         print('distance center = ', carstate.distance_from_center)
@@ -171,7 +186,6 @@ class MyDriver(Driver):
         print('Client ShutDown')
         
         self.saveResults()
-        
         
         if self.data_logger:
             self.data_logger.close()

@@ -110,6 +110,8 @@ class State(Value):
     def focused_distances_from_egde_valid(self):
         """Flag whether focus distances are currently valid."""
         return -1 not in self.focused_distances_from_edge
+
+    
     
     def to_input_array(self):
         

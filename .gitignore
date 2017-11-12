@@ -4,14 +4,10 @@ torcs-client/__pycache__/
 torcs-client/drivelogs/
 torcs-client/output/
 torcs-client/pytocl/__pycache__/
-torcs-client/*_err.txt
-torcs-client/*_out.txt
-torcs-server/*
-!torcs-server/torcs_tournament.py
 train_data/*
-debug/*
+debug
+model_results
 neat/*
 !neat/src/
 neatsociety/__pycache__
 neatsociety/nn/__pycache__
-model.pickle

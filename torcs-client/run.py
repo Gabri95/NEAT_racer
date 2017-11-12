@@ -44,13 +44,11 @@ if __name__ == '__main__':
     
     args, _ = parser.parse_known_args()
     
-    
     if not args.print:
-        
         orig_stdout = sys.stdout
         orig_stderr = sys.stderr
-        file_out = open('../debug/out.log', 'w')
-        file_err = open('../debug/err.log', 'w')
+        file_out = open('../debug/client/out.log', 'w')
+        file_err = open('../debug/client/err.log', 'w')
         sys.stdout = file_out
         sys.stderr = file_err
     
@@ -70,7 +68,6 @@ if __name__ == '__main__':
         else:
             main(Driver())
 
-    
     except Exception as exc:
         traceback.print_exc()
         
@@ -80,8 +77,8 @@ if __name__ == '__main__':
             file_out.close()
             file_err.close()
 
-            copyfile('../debug/out.log', '../debug/out_{}.log'.format(tm.time()))
-            copyfile('../debug/err.log', '../debug/err_{}.log'.format(tm.time()))
+            copyfile('../debug/client/out.log', '../debug/client/out_{}.log'.format(tm.time()))
+            copyfile('../debug/client/err.log', '../debug/client/err_{}.log'.format(tm.time()))
         
         raise
     
