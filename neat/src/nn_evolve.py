@@ -19,8 +19,7 @@ import sys
 
 sys.path.insert(0, '../')
 
-import neatsociety
-from neatsociety import nn, population, statistics, visualize, parallel, activation_functions
+from neatsociety import nn, population, statistics, visualize
 
 def eval_fitness(genomes):
     dir = os.path.dirname(os.path.realpath(__file__))
@@ -47,15 +46,16 @@ def eval_fitness(genomes):
     
         values = [float(x) for x in result_file.readline().split(',')]
         
-        distance, time, laps, distance_from_start, damage, penalty = values[:6]
+        distance, time, laps, distance_from_start, damage, penalty, avg_speed = values[:7]
         
         fitness = distance - 0.1*damage - 100*penalty
         print('\tDistance = ', distance)
         print('\tDamage = ', damage)
         print('\tPenalty = ', penalty)
+        print('\tAvgSpeed = ', avg_speed)
         
         if laps >= 3:
-            fitness += 200.0*distance/(time+1)
+            fitness += 200.0*avg_speed#distance/(time+1)
         
         print('\tFITNESS = ' + str(fitness))
         
@@ -85,6 +85,7 @@ def run(generations=20, frequency=None, output_dir=None, checkpoint=None):
         frequency = generations
         
     local_dir = os.path.dirname(__file__)
+    
     pop = population.Population(os.path.join(local_dir, 'nn_config'))
     
     if checkpoint is not None:

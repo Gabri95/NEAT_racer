@@ -112,9 +112,10 @@ class State(Value):
         return -1 not in self.focused_distances_from_edge
     
     def to_input_array(self):
-        array = []#np.zeros((26,))
         
-        array.append(self.angle / np.pi) #180.0
+        array = []
+        
+        array.append(self.angle / 180.0)
         
         
         #self.current_lap_time
@@ -128,12 +129,13 @@ class State(Value):
         
         #array.append(self.fuel)
         
-        # for gear in range(-1, 7):
-        #     if gear == self.gear:
+        # gear = np.sign(self.gear)
+        # for g in range(-1, 2):
+        #     if g == gear:
         #         array.append(1)
         #     else:
         #         array.append(0)
-        #
+
 
         #array.append(np.sign(self.gear))
         
@@ -148,14 +150,14 @@ class State(Value):
         #array.append(self.rpm/8000.0)
         array.append(self.speed_x/40.0)
         array.append(self.speed_y/40.0)
-        array.append(self.speed_z/10.0)
+        #array.append(self.speed_z/10.0)
         
         
         for j in range(19):
             if math.fabs(self.distance_from_center) > 1:
-              array.append(-1)
+                array.append(-1)
             else:
-              array.append(self.distances_from_edge[j]/200.0)
+                array.append(self.distances_from_edge[j]/200.0)
 
         array.append(self.distance_from_center)
 

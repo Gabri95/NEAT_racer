@@ -74,7 +74,9 @@ class Config(object):
         for fn in self.activation_functions:
             if not activation_functions.is_valid(fn):
                 raise Exception("Invalid activation function name: {0!r}".format(fn))
-
+        
+        print(self.feedforward)
+        
         # Select a genotype class.
         if self.feedforward:
             self.genotype = FFGenome

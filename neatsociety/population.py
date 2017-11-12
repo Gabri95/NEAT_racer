@@ -43,7 +43,9 @@ class Population(object):
             self.add_reporter(StdOutReporter())
 
         self.config = config
-
+        
+        print(self.config.genotype.__name__)
+        
         ## Check if we have a society directory defined and may be this a continuation on an existing run.
         if self.config.society_directory != None:
             ## Check if latest society file is available

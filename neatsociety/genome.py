@@ -139,7 +139,10 @@ class Genome(object):
         # they should probably be separate collections.
         possible_outputs = [n for n in self.node_genes.values() if n.type != 'INPUT']
         out_node = choice(possible_outputs)
-
+        
+        if in_node.type != 'INPUT' and out_node.type == 'HIDDEN':
+            print('RECURRENT LINK!!!')
+        
         # Only create the connection if it doesn't already exist.
         key = (in_node.ID, out_node.ID)
         if key not in self.conn_genes:
