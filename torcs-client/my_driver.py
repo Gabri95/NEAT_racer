@@ -48,8 +48,6 @@ class MyDriver(Driver):
         input = carstate.to_input_array()
         
         
-        
-        
         if np.isnan(input).any():
             if not self.stopped:
                 self.saveResults()
@@ -172,8 +170,10 @@ class MyDriver(Driver):
                 self.laps,
                 self.distance_from_start,
                 self.damage,
-                math.sqrt(self.offroad_penalty / self.iterations_count),
-                self.avg_speed/self.iterations_count))
+                #self.offroad_penalty / self.iterations_count if self.iterations_count > 0 else 0,
+                math.sqrt(self.offroad_penalty / self.iterations_count) if self.iterations_count > 0 else 0,
+                self.avg_speed/self.iterations_count if self.iterations_count > 0 else 0)
+            )
             f.close()
     
     def on_shutdown(self):

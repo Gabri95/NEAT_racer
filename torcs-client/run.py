@@ -9,6 +9,24 @@ import sys
 from shutil import copyfile
 import time as tm
 import traceback
+import signal
+import time
+
+
+driver = None
+
+def sigterm_handler(_signo, _stack_frame):
+    print('Someone killed me')
+    global driver
+    if driver is not None and isinstance(driver, MyDriver):
+        driver.saveResults()
+    sys.exit(0)
+
+
+signal.signal(signal.SIGINT, sigterm_handler)
+signal.signal(signal.SIGTERM, sigterm_handler)
+
+
 
 if __name__ == '__main__':
     
@@ -44,6 +62,11 @@ if __name__ == '__main__':
     
     args, _ = parser.parse_known_args()
     
+    print(args.parameters_file)
+    print(args.output_file)
+    # print(args.name)
+
+    
     if not args.print:
         orig_stdout = sys.stdout
         orig_stderr = sys.stderr
@@ -51,25 +74,22 @@ if __name__ == '__main__':
         file_err = open('../debug/client/err.log', 'w')
         sys.stdout = file_out
         sys.stderr = file_err
+
+
+
+    if args.parameters_file is not None:
+        driver = MyDriver(args.parameters_file, out_file=args.output_file)
+    else:
+        driver = Driver()
     
     try:
-        #model = Model(I=29, O=4, H=10)
-        #model.save_to_file('../rnd.param')
-    
         
-    
-        print(args.parameters_file)
-        print(args.output_file)
-        #print(args.name)
-        
-        if args.parameters_file is not None:
-            print('NN driver!!!!!!')
-            main(MyDriver(args.parameters_file, out_file=args.output_file))#, name=args.name))
-        else:
-            main(Driver())
-
+        main(driver)
     except Exception as exc:
         traceback.print_exc()
+
+        if args.parameters_file is not None:
+            driver.saveResults()
         
         if not args.print:
             sys.stdout = orig_stdout

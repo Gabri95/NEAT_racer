@@ -20,6 +20,8 @@ import datetime
 from shutil import copyfile
 import traceback
 import time
+import signal
+
 
 sys.path.insert(0, '../')
 
@@ -31,18 +33,9 @@ debug_path = '../../debug/'
 models_path = '../models/'
 results_path = '../../model_results/'
 config_path = '../../config/'
-shutdown_wait = 1
+shutdown_wait = 10
 result_saving_wait = 5
-timeout_server = 120
-
-
-def kill(proc):
-    proc.terminate()
-    time.sleep(shutdown_wait)
-    
-    if proc.poll() is None:
-        proc.kill()
-        time.sleep(shutdown_wait)
+timeout_server = 100
         
 
 def evaluate(net):
@@ -72,42 +65,61 @@ def evaluate(net):
     server_stderr = open(server_stderr_path, 'w')
     
     opened_files = [client_stdout, client_stderr, server_stdout, server_stderr]
+    
+    server = None
 
+    print('Starting Client')
+    client = subprocess.Popen(['./start.sh', '-l', '-p', '3001', '-w', phenotype_file, '-o', results_file],
+                              stdout=client_stdout,
+                              stderr=client_stderr,
+                              cwd=os.path.join(dir, client_path),
+                              preexec_fn=os.setsid
+                              )
+
+    # wait a few seconds to let client start
+    #time.sleep(2)
+    
     timeout = False
     try:
-        print('Starting Client')
-        client = subprocess.Popen(['./start.sh', '-l', '-p', '3001', '-w', phenotype_file, '-o', results_file],
-                                  stdout=client_stdout,
-                                  stderr=client_stderr,
-                                  cwd=os.path.join(dir, client_path)
-                                  )
-        
         
         print('Waiting for server to stop')
-        subprocess.call(['time',
-                         'torcs',
-                         '-d',
-                         '-r',
-                         os.path.join(dir, config_path, 'quickrace.xml')],
-                        timeout=timeout_server,
-                        stdout=server_stdout,
-                        stderr=server_stderr
-                        )
+        server = subprocess.Popen(
+            ['time',
+            'torcs',
+            '-d',
+            '-r',
+            os.path.join(dir, config_path, 'quickrace.xml')],
+            stdout=server_stdout,
+            stderr=server_stderr,
+            preexec_fn=os.setsid
+            )
+        
+        server.wait(timeout=timeout_server)
+    
     except subprocess.TimeoutExpired:
         print('SERVER TIMED-OUT!')
         timeout = True
+        
+        if server is not None:
+            print('Killing server and its children')
+            os.killpg(os.getpgid(server.pid), signal.SIGTERM)
         
         copy_path = os.path.join(dir, debug_path, 'model_timedout_{}.pickle'.format(current_time))
         
         print('Copying the model which caused the timeout to:', copy_path)
         copyfile(phenotype_file, copy_path)
-        
     except:
         print('Ops! Something happened"')
         traceback.print_exc()
 
-        print('Killing client')
-        kill(client)
+        if server is not None:
+            print('Killing server and its children')
+            os.killpg(os.getpgid(server.pid), signal.SIGTERM)
+
+        client.terminate()
+        time.sleep(1)
+        if client.poll() is None:
+            client.kill()
         
         for file in opened_files:
             file.close()
@@ -118,12 +130,22 @@ def evaluate(net):
         copyfile(server_stderr_path, os.path.join(dir, debug_path, 'server/ERROR_err_{}.log'.format(current_time)))
         
         raise
-    
-    
+
     
     print('Killing client')
-    kill(client)
 
+    #Try to be gentle
+    os.killpg(os.getpgid(client.pid), signal.SIGTERM)
+    
+    #give it some time to stop gracefully
+    client.wait(timeout=shutdown_wait)
+    
+    #if it is still running kill it
+    if client.poll() is None:
+        print('\tTrying to kill client')
+        os.killpg(os.getpgid(client.pid), signal.SIGKILL)
+        time.sleep(shutdown_wait)
+    
     for file in opened_files:
         file.close()
     
@@ -136,14 +158,9 @@ def evaluate(net):
     
     print('Simulation ended')
     
-    # for zippath in glob.iglob(os.path.join(dir, '../*.txt')):
-    #     os.remove(zippath)
-    # for zippath in glob.iglob(os.path.join(dir, '../../torcs-client/output/*.txt')):
-    #     os.remove(zippath)
-
 
     #wait a couple of seconds for the results file to be created
-    time.sleep(2)
+    time.sleep(1)
     
     #if the result file hasn't been created yet, try 10 times waiting 'result_saving_wait' seconds between each attempt
     attempts = 0
@@ -152,14 +169,19 @@ def evaluate(net):
         print('Attempt', attempts, 'Time =', datetime.datetime.now().isoformat())
         time.sleep(result_saving_wait)
         
-        
+    #try opening the file
     try:
         results = open(results_file, 'r')
-
+        
+        #read the comma-separated values in the first line of the file
         values = [float(x) for x in results.readline().split(',')]
 
         results.close()
+        
     except IOError:
+        #if the files doesn't exist print, there might have been some error...
+        #print the stacktrace and return None
+        
         print("Can't find the result file!")
         traceback.print_exc()
         values = None
@@ -179,11 +201,14 @@ def eval_fitness(genomes):
     
     tot = len(genomes)
     
+    #evaluate the genotypes one by one
     for i, g in enumerate(genomes):
         
         print('evaluating', i+1, '/', tot, '\n')
         net = nn.create_recurrent_phenotype(g)
         
+        
+        #run the simulation to evaluate the model
         values = evaluate(net)
         
         if values is None:
@@ -191,7 +216,7 @@ def eval_fitness(genomes):
         else:
             distance, duration, laps, distance_from_start, damage, penalty, avg_speed = values[:7]
             
-            fitness = distance - 0.1*damage - 100*penalty
+            fitness = distance - 0.2*damage - 100*penalty
             print('\tDistance = ', distance)
             print('\tDamage = ', damage)
             print('\tPenalty = ', penalty)
@@ -207,16 +232,14 @@ def eval_fitness(genomes):
     print('\n... finished evaluation\n\n')
     print('Cleaning directories')
     
+    #at the end of the generation, clean the files we don't need anymore
+    
     for zippath in glob.iglob(os.path.join(dir, results_path, 'results_*')):
         os.remove(zippath)
     for zippath in glob.iglob(os.path.join(dir, models_path, '*')):
         os.remove(zippath)
     
 
-
-def eval_fitness_test(genomes):
-    for i, g in enumerate(genomes):
-        g.fitness = i
 
 
 def get_best_genome(population):
