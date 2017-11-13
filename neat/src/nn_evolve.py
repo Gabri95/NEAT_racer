@@ -247,7 +247,7 @@ def get_best_genome(population):
     
     for s in population.species:
         for g in s.members:
-            if best is None or (g.fitness is not None and g.fitness > best.fitness):
+            if best is None or best.fitness is None or (g.fitness is not None and g.fitness > best.fitness):
                 best = g
     return best
 
