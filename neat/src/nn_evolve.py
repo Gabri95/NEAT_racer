@@ -36,9 +36,12 @@ config_path = '../../config/'
 shutdown_wait = 10
 result_saving_wait = 5
 timeout_server = 100
-        
+
+configuration = None
+
 
 def evaluate(net):
+    
     dir = os.path.dirname(os.path.realpath(__file__))
     
     current_time = datetime.datetime.now().isoformat()
@@ -88,7 +91,7 @@ def evaluate(net):
             'torcs',
             '-d',
             '-r',
-            os.path.join(dir, config_path, 'quickrace.xml')],
+            os.path.join(dir, config_path, configuration)],
             stdout=server_stdout,
             stderr=server_stderr,
             preexec_fn=os.setsid
@@ -216,14 +219,14 @@ def eval_fitness(genomes):
         else:
             distance, duration, laps, distance_from_start, damage, penalty, avg_speed = values[:7]
             
-            fitness = distance - 0.2*damage - 100*penalty
+            fitness = distance - 0.1*damage - 100*penalty
             print('\tDistance = ', distance)
             print('\tDamage = ', damage)
             print('\tPenalty = ', penalty)
             print('\tAvgSpeed = ', avg_speed)
             
-            if laps >= 3:
-                fitness += 200.0*avg_speed#distance/(duration+1)
+            if laps >= 2:
+                fitness += 30.0*avg_speed#distance/(duration+1)
         
         print('\tFITNESS =', fitness, '\n')
         
@@ -252,7 +255,9 @@ def get_best_genome(population):
     return best
 
 
-def run(generations=20, frequency=None, output_dir=None, checkpoint=None):
+def run(neat_config, generations=20, frequency=None, output_dir=None, checkpoint=None, configuration_file=None):
+    
+    global configuration
     
     #build the directories used used by this script if they don't exist
     
@@ -264,15 +269,23 @@ def run(generations=20, frequency=None, output_dir=None, checkpoint=None):
         directory = os.path.join(real_dir, d)
         if not os.path.exists(directory):
             os.makedirs(directory)
+
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     
-    
+    if configuration_file is None:
+        print('Error! No configuaration file has been set')
+        return
+    if not os.path.isfile(os.path.join(real_dir, config_path, configuration_file)):
+        print('Error! Configuration file "{}" does not exist in {}'.format(configuration_file, os.path.join(real_dir, config_path)))
+        return
+    else:
+        configuration = configuration_file
     
     if frequency is None:
         frequency = generations
-        
-    local_dir = os.path.dirname(__file__)
     
-    pop = population.Population(os.path.join(local_dir, 'nn_config'))
+    pop = population.Population(neat_config)
     
     if checkpoint is not None:
         print('Loading from ', checkpoint)
@@ -297,25 +310,25 @@ def run(generations=20, frequency=None, output_dir=None, checkpoint=None):
     
     print('Number of evaluations: {0}'.format(pop.total_evaluations))
 
-    print('Saving best net in ../best.pickle')
-    pickle.dump(nn.create_recurrent_phenotype(get_best_genome(pop)), open("../best.pickle", "wb"))
+    print('Saving best net in {}/best.pickle'.format(output_dir))
+    pickle.dump(nn.create_recurrent_phenotype(get_best_genome(pop)), open(os.path.join(output_dir, "best.pickle"), "wb"))
     
     # Display the most fit genome.
-    print('\nBest genome:')
+    #print('\nBest genome:')
     winner = pop.statistics.best_genome()
-    print(winner)
+    #print(winner)
 
     
 
     # Visualize the winner network and plot/log statistics.
-    visualize.draw_net(winner, view=True, filename="nn_winner.gv")
-    visualize.draw_net(winner, view=True, filename="nn_winner-enabled.gv", show_disabled=False)
-    visualize.draw_net(winner, view=True, filename="nn_winner-enabled-pruned.gv", show_disabled=False, prune_unused=True)
-    visualize.plot_stats(pop.statistics)
-    visualize.plot_species(pop.statistics)
-    statistics.save_stats(pop.statistics)
-    statistics.save_species_count(pop.statistics)
-    statistics.save_species_fitness(pop.statistics)
+    visualize.draw_net(winner, view=True, filename=os.path.join(output_dir, "nn_winner.gv"))
+    visualize.draw_net(winner, view=True, filename=os.path.join(output_dir, "nn_winner-enabled.gv"), show_disabled=False)
+    visualize.draw_net(winner, view=True, filename=os.path.join(output_dir, "nn_winner-enabled-pruned.gv"), show_disabled=False, prune_unused=True)
+    visualize.plot_stats(pop.statistics, filename=os.path.join(output_dir, 'avg_fitness.svg'))
+    visualize.plot_species(pop.statistics, filename=os.path.join(output_dir, 'speciation.svg'))
+    statistics.save_stats(pop.statistics, filename=os.path.join(output_dir, 'fitness_history.csv'))
+    statistics.save_species_count(pop.statistics, filename=os.path.join(output_dir, 'speciation.csv'))
+    statistics.save_species_fitness(pop.statistics, filename=os.path.join(output_dir, 'species_fitness.csv'))
 
 
 if __name__ == '__main__':
@@ -342,12 +355,31 @@ if __name__ == '__main__':
         help='How often to store checkpoints',
         type=int
     )
-    
+
     parser.add_argument(
         '-o',
         '--output_dir',
         help='Directory where to store checkpoint.',
         type=str
+    )
+
+    parser.add_argument(
+        '-x',
+        '--configuration_file',
+        help='XML configuration file for running the race. It has to be in the {} directory'.format(config_path),
+        type=str,
+        default='quickrace.xml'
+    )
+
+    local_dir = os.path.dirname(__file__)
+    default_neat_config = os.path.join(local_dir, 'nn_config')
+
+    parser.add_argument(
+        '-n',
+        '--neat_config',
+        help='NEAT configuration file',
+        type=str,
+        default=default_neat_config,
     )
     
     args, _ = parser.parse_known_args()

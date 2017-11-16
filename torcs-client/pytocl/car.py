@@ -116,44 +116,31 @@ class State(Value):
     def to_input_array(self):
         
         array = []
-        
-        array.append(self.angle / 180.0)
-        
-        
+
         #self.current_lap_time
-        
-        array.append(self.damage/10000.0)
-
         #array.append(self.distance_from_start)
-
         #array.append(self.distance_raced)
-        
-        
         #array.append(self.fuel)
-        
         # gear = np.sign(self.gear)
         # for g in range(-1, 2):
         #     if g == gear:
         #         array.append(1)
         #     else:
         #         array.append(0)
-
-
         #array.append(np.sign(self.gear))
-        
-        
         #self.last_lap_time
-        
         # for j in range(36):
         #     array.append(self.opponents[j]/200.0)
-        
         #self.race_position
-
         #array.append(self.rpm/8000.0)
+
+        array.append(self.angle / 180.0)
+
+        # TODO - TO ADD BACK IF USING THE CIRCUIT MODEL
+        # array.append(self.damage/10000.0)
+        
         array.append(self.speed_x/40.0)
         array.append(self.speed_y/40.0)
-        #array.append(self.speed_z/10.0)
-        
         
         for j in range(19):
             if math.fabs(self.distance_from_center) > 1 or self.distances_from_edge[j] < 0:
@@ -162,11 +149,13 @@ class State(Value):
                 array.append(self.distances_from_edge[j]/200.0)
 
         array.append(self.distance_from_center)
-
-        #for j in range(4):
-        #    array.append(self.wheel_velocities[j]/150.0)
-
-        #array.append(self.z)
+        
+        #TODO - TO REMOVE FOR THE CIRCUIT MODEL
+        for j in range(4):
+            array.append(self.wheel_velocities[j]/3000.0) #/150.0
+        #array.append(self.z-0.36)
+        #array.append(self.speed_z / 10.0)
+        
         
         #TODO - deal with problem that those values are reliable only once every second
         # for i in range(5):

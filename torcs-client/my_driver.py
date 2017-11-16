@@ -2,6 +2,7 @@ from pytocl.driver import Driver
 from pytocl.car import State, Command
 from model import *
 import pickle
+from esn_2 import *
 import math
 import time as tm
 import sys
@@ -61,6 +62,7 @@ class MyDriver(Driver):
         
         projected_speed = get_projected_speed(carstate.speed_x, carstate.speed_y, carstate.angle)
         print(tm.ctime())
+        print('wheel velocities =', carstate.wheel_velocities)
         print('distance raced = ', carstate.distance_raced)
         # print('distances = ', carstate.distances_from_edge)
         print('distance center = ', carstate.distance_from_center)
@@ -70,19 +72,19 @@ class MyDriver(Driver):
         print('vy = ', carstate.speed_y)
         print('angle = ', carstate.angle)
         
-        print('self curr_time', self.curr_time)
-        print('self dist from start', self.distance_from_start)
-        print('dist from start', carstate.distance_from_start)
-
-        print('current lap time: ', carstate.current_lap_time)
-        print('last lap time: ', carstate.last_lap_time)
-        print('self laps: ', self.laps)
-        print('self time', self.time)
-        print('damage = ', carstate.damage)
-        print('rpm = ', carstate.rpm)
-        print('gear = ', carstate.gear)
+        # print('self curr_time', self.curr_time)
+        # print('self dist from start', self.distance_from_start)
+        # print('dist from start', carstate.distance_from_start)
+        #
+        # print('current lap time: ', carstate.current_lap_time)
+        # print('last lap time: ', carstate.last_lap_time)
+        # print('self laps: ', self.laps)
+        # print('self time', self.time)
+        #print('damage = ', carstate.damage)
+        #print('rpm = ', carstate.rpm)
+        #print('gear = ', carstate.gear)
         print('offroad penalty = ', self.offroad_penalty)
-        #print('z = ', carstate.z)
+        print('z = ', carstate.z)
         
         
         self.avg_speed += projected_speed
@@ -112,6 +114,8 @@ class MyDriver(Driver):
             for i in range(len(output)):
                 if np.isnan(output[i]):
                     output[i] = 0.0
+                else:
+                    output[i] = max(output[i], 0.0)
 
             print('Out = ' + str(output))
             
