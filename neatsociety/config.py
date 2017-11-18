@@ -59,6 +59,15 @@ class Config(object):
         self.feedforward = bool(int(parameters.get('phenotype', 'feedforward')))
         self.weight_stdev = float(parameters.get('phenotype', 'weight_stdev'))
         self.activation_functions = parameters.get('phenotype', 'activation_functions').strip().split()
+        
+        try:
+            self.output_activation_functions = parameters.get('phenotype', 'output_activation_functions').strip().split()
+        except:
+            self.output_activation_functions = []
+
+        self.reevaluate = bool(int(parameters.get('phenotype', 'reevaluate')))
+        print('reevaluate = ', self.reevaluate)
+    
 
         # Verify that initial connection type is valid.
         if 'partial' in self.initial_connection:

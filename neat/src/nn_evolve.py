@@ -1,204 +1,25 @@
-"""
-This example produces networks that can remember a fixed-length sequence of bits. It is
-intentionally very (overly?) simplistic just to show the usage of the NEAT library. However,
-if you come up with a more interesting or impressive example, please submit a pull request!
-"""
 
 from __future__ import print_function
 
-import math
 import os
-import random
 import pickle
-import numpy as np
-import subprocess
 import glob
 import os.path
 import argparse
 import sys
+import simulation
 import datetime
-from shutil import copyfile
-import traceback
-import time
-import signal
+
+FILE_PATH = os.path.realpath(__file__)
+DIR_PATH = os.path.dirname(FILE_PATH)
 
 
-sys.path.insert(0, '../')
+sys.path.insert(0, os.path.join(DIR_PATH, '../../'))
 
 from neatsociety import nn, population, statistics, visualize
 
 
-client_path = '../../torcs-client/'
-debug_path = '../../debug/'
-models_path = '../models/'
-results_path = '../../model_results/'
-config_path = '../../config/'
-shutdown_wait = 10
-result_saving_wait = 5
-timeout_server = 100
-
-configuration = None
-
-
-def evaluate(net):
-    
-    dir = os.path.dirname(os.path.realpath(__file__))
-    
-    current_time = datetime.datetime.now().isoformat()
-    start_time = time.time()
-
-    phenotype_file = os.path.join(dir, models_path, "model_{}.pickle".format(current_time))
-    results_file = os.path.join(dir, results_path, 'results_{}'.format(current_time))
-    
-    pickle.dump(net, open(phenotype_file, "wb"))
-    
-    # subprocess.call(['time',
-    #                  'python',
-    #                  os.path.join(dir, '../../torcs-server/torcs_tournament.py'),
-    #                  '../config/quickrace.yml'])
-
-    client_stdout_path = os.path.join(dir, debug_path, 'client/out.log')
-    client_stderr_path = os.path.join(dir, debug_path, 'client/err.log')
-    server_stdout_path = os.path.join(dir, debug_path, 'server/out.log')
-    server_stderr_path = os.path.join(dir, debug_path, 'server/err.log')
-    
-    client_stdout = open(client_stdout_path, 'w')
-    client_stderr = open(client_stderr_path, 'w')
-    server_stdout = open(server_stdout_path, 'w')
-    server_stderr = open(server_stderr_path, 'w')
-    
-    opened_files = [client_stdout, client_stderr, server_stdout, server_stderr]
-    
-    server = None
-
-    print('Starting Client')
-    client = subprocess.Popen(['./start.sh', '-l', '-p', '3001', '-w', phenotype_file, '-o', results_file],
-                              stdout=client_stdout,
-                              stderr=client_stderr,
-                              cwd=os.path.join(dir, client_path),
-                              preexec_fn=os.setsid
-                              )
-
-    # wait a few seconds to let client start
-    #time.sleep(2)
-    
-    timeout = False
-    try:
-        
-        print('Waiting for server to stop')
-        server = subprocess.Popen(
-            ['time',
-            'torcs',
-            '-d',
-            '-r',
-            os.path.join(dir, config_path, configuration)],
-            stdout=server_stdout,
-            stderr=server_stderr,
-            preexec_fn=os.setsid
-            )
-        
-        server.wait(timeout=timeout_server)
-    
-    except subprocess.TimeoutExpired:
-        print('SERVER TIMED-OUT!')
-        timeout = True
-        
-        if server is not None:
-            print('Killing server and its children')
-            os.killpg(os.getpgid(server.pid), signal.SIGTERM)
-        
-        copy_path = os.path.join(dir, debug_path, 'model_timedout_{}.pickle'.format(current_time))
-        
-        print('Copying the model which caused the timeout to:', copy_path)
-        copyfile(phenotype_file, copy_path)
-    except:
-        print('Ops! Something happened"')
-        traceback.print_exc()
-
-        if server is not None:
-            print('Killing server and its children')
-            os.killpg(os.getpgid(server.pid), signal.SIGTERM)
-
-        client.terminate()
-        time.sleep(1)
-        if client.poll() is None:
-            client.kill()
-        
-        for file in opened_files:
-            file.close()
-            
-        copyfile(client_stdout_path, os.path.join(dir, debug_path, 'client/ERROR_out_{}.log'.format(current_time)))
-        copyfile(client_stderr_path, os.path.join(dir, debug_path, 'client/ERROR_err_{}.log'.format(current_time)))
-        copyfile(server_stdout_path, os.path.join(dir, debug_path, 'server/ERROR_out_{}.log'.format(current_time)))
-        copyfile(server_stderr_path, os.path.join(dir, debug_path, 'server/ERROR_err_{}.log'.format(current_time)))
-        
-        raise
-
-    
-    print('Killing client')
-
-    #Try to be gentle
-    os.killpg(os.getpgid(client.pid), signal.SIGTERM)
-    
-    #give it some time to stop gracefully
-    client.wait(timeout=shutdown_wait)
-    
-    #if it is still running kill it
-    if client.poll() is None:
-        print('\tTrying to kill client')
-        os.killpg(os.getpgid(client.pid), signal.SIGKILL)
-        time.sleep(shutdown_wait)
-    
-    for file in opened_files:
-        file.close()
-    
-    if timeout:
-        copyfile(client_stdout_path, os.path.join(dir, debug_path, 'client/timeout_out_{}.log'.format(current_time)))
-        copyfile(client_stderr_path, os.path.join(dir, debug_path, 'client/timeout_err_{}.log'.format(current_time)))
-        copyfile(server_stdout_path, os.path.join(dir, debug_path, 'server/timeout_out_{}.log'.format(current_time)))
-        copyfile(server_stderr_path, os.path.join(dir, debug_path, 'server/timeout_err_{}.log'.format(current_time)))
-    
-    
-    print('Simulation ended')
-    
-
-    #wait a couple of seconds for the results file to be created
-    time.sleep(1)
-    
-    #if the result file hasn't been created yet, try 10 times waiting 'result_saving_wait' seconds between each attempt
-    attempts = 0
-    while not os.path.exists(results_file) and attempts < 10:
-        attempts += 1
-        print('Attempt', attempts, 'Time =', datetime.datetime.now().isoformat())
-        time.sleep(result_saving_wait)
-        
-    #try opening the file
-    try:
-        results = open(results_file, 'r')
-        
-        #read the comma-separated values in the first line of the file
-        values = [float(x) for x in results.readline().split(',')]
-
-        results.close()
-        
-    except IOError:
-        #if the files doesn't exist print, there might have been some error...
-        #print the stacktrace and return None
-        
-        print("Can't find the result file!")
-        traceback.print_exc()
-        values = None
-
-    end_time = time.time()
-    
-    print('Total Execution Time =', end_time - start_time, 'seconds')
-    
-    return values
-
-
-def eval_fitness(genomes):
-    
-    dir = os.path.dirname(os.path.realpath(__file__))
+def eval_fitness(genomes, evaluate_function=None, cleaner=None):
     
     print('\nStarting evaluation...\n\n')
     
@@ -212,34 +33,39 @@ def eval_fitness(genomes):
         
         
         #run the simulation to evaluate the model
-        values = evaluate(net)
+        values = evaluate_function(net)
         
         if values is None:
             fitness = -100
         else:
             distance, duration, laps, distance_from_start, damage, penalty, avg_speed = values[:7]
             
-            fitness = distance - 0.1*damage - 100*penalty
+            fitness = distance - 0.03*damage - 100*penalty
             print('\tDistance = ', distance)
             print('\tDamage = ', damage)
             print('\tPenalty = ', penalty)
             print('\tAvgSpeed = ', avg_speed)
             
             if laps >= 2:
-                fitness += 30.0*avg_speed#distance/(duration+1)
+                fitness += 50.0*avg_speed#distance/(duration+1)
         
         print('\tFITNESS =', fitness, '\n')
         
         g.fitness = fitness
 
     print('\n... finished evaluation\n\n')
+    
+    if cleaner is not None:
+        #at the end of the generation, clean the files we don't need anymore
+        cleaner()
+
+
+
+def clean_temp_files(results_path, models_path):
     print('Cleaning directories')
-    
-    #at the end of the generation, clean the files we don't need anymore
-    
-    for zippath in glob.iglob(os.path.join(dir, results_path, 'results_*')):
+    for zippath in glob.iglob(os.path.join(DIR_PATH, results_path, 'results_*')):
         os.remove(zippath)
-    for zippath in glob.iglob(os.path.join(dir, models_path, '*')):
+    for zippath in glob.iglob(os.path.join(DIR_PATH, models_path, '*')):
         os.remove(zippath)
     
 
@@ -255,32 +81,19 @@ def get_best_genome(population):
     return best
 
 
-def run(neat_config, generations=20, frequency=None, output_dir=None, checkpoint=None, configuration_file=None):
-    
-    global configuration
-    
-    #build the directories used used by this script if they don't exist
-    
-    real_dir = os.path.dirname(os.path.realpath(__file__))
-    
-    directories = [client_path, debug_path + 'client', debug_path + 'server', models_path, results_path, config_path]
-    
-    for d in directories:
-        directory = os.path.join(real_dir, d)
-        if not os.path.exists(directory):
-            os.makedirs(directory)
+def run(neat_config, name, generations=20, port=3001, frequency=None, output_dir=None, checkpoint=None, configuration=None):
 
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
     
-    if configuration_file is None:
+    
+    if configuration is None:
         print('Error! No configuaration file has been set')
         return
-    if not os.path.isfile(os.path.join(real_dir, config_path, configuration_file)):
-        print('Error! Configuration file "{}" does not exist in {}'.format(configuration_file, os.path.join(real_dir, config_path)))
-        return
-    else:
-        configuration = configuration_file
+
+    output_dir, results_path, models_path, EVAL_FUNCTION = simulation.initialize_experiments(configuration, name, output_dir, port=port)
+    
+    EVAL_POPULATION = lambda pop: eval_fitness(pop, evaluate_function=EVAL_FUNCTION, cleaner=lambda: clean_temp_files(results_path, models_path))
+    
+    best_model_file = os.path.join(output_dir, 'best.pickle')
     
     if frequency is None:
         frequency = generations
@@ -293,12 +106,13 @@ def run(neat_config, generations=20, frequency=None, output_dir=None, checkpoint
     
     for g in range(1, generations+1):
         
-        pop.run(eval_fitness, 1)
+        pop.run(EVAL_POPULATION, 1)
         
         if g % frequency == 0:
             if output_dir is not None:
-                print('Saving best net in ../best.pickle')
-                pickle.dump(nn.create_recurrent_phenotype(get_best_genome(pop)), open("../best.pickle", "wb"))
+                print('Saving best net in {}'.format(best_model_file))
+                best_genome = get_best_genome(pop)
+                pickle.dump(nn.create_recurrent_phenotype(best_genome), open(best_model_file, "wb"))
                 
                 new_checkpoint = os.path.join(output_dir, 'neat_gen_{}.checkpoint'.format(pop.generation))
                 print('Storing to ', new_checkpoint)
@@ -307,11 +121,21 @@ def run(neat_config, generations=20, frequency=None, output_dir=None, checkpoint
                 print('Plotting statistics')
                 visualize.plot_stats(pop.statistics, filename=os.path.join(output_dir, 'avg_fitness.svg'))
                 visualize.plot_species(pop.statistics, filename=os.path.join(output_dir, 'speciation.svg'))
-    
+                
+                print('Save network view')
+                visualize.draw_net(best_genome, view=False,
+                                   filename=os.path.join(output_dir, "nn_winner-enabled-pruned.gv"),
+                                   show_disabled=False, prune_unused=True)
+
+                visualize.draw_net(best_genome, view=False, filename=os.path.join(output_dir, "nn_winner.gv"))
+                visualize.draw_net(best_genome, view=False, filename=os.path.join(output_dir, "nn_winner-enabled.gv"),
+                                   show_disabled=False)
+                
+                
     print('Number of evaluations: {0}'.format(pop.total_evaluations))
 
-    print('Saving best net in {}/best.pickle'.format(output_dir))
-    pickle.dump(nn.create_recurrent_phenotype(get_best_genome(pop)), open(os.path.join(output_dir, "best.pickle"), "wb"))
+    print('Saving best net in {}'.format(best_model_file))
+    pickle.dump(nn.create_recurrent_phenotype(get_best_genome(pop)), open(best_model_file, "wb"))
     
     # Display the most fit genome.
     #print('\nBest genome:')
@@ -365,10 +189,26 @@ if __name__ == '__main__':
 
     parser.add_argument(
         '-x',
-        '--configuration_file',
-        help='XML configuration file for running the race. It has to be in the {} directory'.format(config_path),
+        '--configuration',
+        help='XML configuration file for running the race. It has to be in the {} directory'.format(simulation.config_path),
         type=str,
         default='quickrace.xml'
+    )
+
+    parser.add_argument(
+        '-p',
+        '--port',
+        help='Port to use for comunication between server (simulator) and client',
+        type=int,
+        default=3001
+    )
+
+    parser.add_argument(
+        '-e',
+        '--name',
+        help='Experiment name',
+        type=str,
+        default=datetime.datetime.now().isoformat()
     )
 
     local_dir = os.path.dirname(__file__)

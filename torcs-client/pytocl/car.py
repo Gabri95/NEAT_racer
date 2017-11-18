@@ -111,56 +111,69 @@ class State(Value):
         """Flag whether focus distances are currently valid."""
         return -1 not in self.focused_distances_from_edge
 
-    
+    # def to_input_array(self):
+    #
+    #     array = []
+    #
+    #     array.append(self.speed_x)
+    #
+    #     array.append(self.distance_from_center)
+    #
+    #     array.append(self.angle)
+    #
+    #     for j in range(19):
+    #         array.append(self.distances_from_edge[j])
+    #
+    #     return np.array(array)/200
     
     def to_input_array(self):
-        
+
         array = []
 
-        #self.current_lap_time
-        #array.append(self.distance_from_start)
-        #array.append(self.distance_raced)
-        #array.append(self.fuel)
+        # self.current_lap_time
+        # array.append(self.distance_from_start)
+        # array.append(self.distance_raced)
+        # array.append(self.fuel)
         # gear = np.sign(self.gear)
         # for g in range(-1, 2):
         #     if g == gear:
         #         array.append(1)
         #     else:
         #         array.append(0)
-        #array.append(np.sign(self.gear))
-        #self.last_lap_time
+        # array.append(np.sign(self.gear))
+        # self.last_lap_time
         # for j in range(36):
         #     array.append(self.opponents[j]/200.0)
-        #self.race_position
-        #array.append(self.rpm/8000.0)
+        # self.race_position
+        # array.append((self.rpm - 2000.0)/5000.0)
 
         array.append(self.angle / 180.0)
 
         # TODO - TO ADD BACK IF USING THE CIRCUIT MODEL
         # array.append(self.damage/10000.0)
-        
-        array.append(self.speed_x/40.0)
-        array.append(self.speed_y/40.0)
-        
+
+        array.append(self.speed_x / 40.0)
+        array.append(self.speed_y / 40.0)
+
         for j in range(19):
             if math.fabs(self.distance_from_center) > 1 or self.distances_from_edge[j] < 0:
                 array.append(-1)
             else:
-                array.append(self.distances_from_edge[j]/200.0)
+                array.append(self.distances_from_edge[j] / 200.0)
 
         array.append(self.distance_from_center)
-        
-        #TODO - TO REMOVE FOR THE CIRCUIT MODEL
+
+        # TODO - TO REMOVE FOR THE CIRCUIT MODEL
         for j in range(4):
-            array.append(self.wheel_velocities[j]/3000.0) #/150.0
-        #array.append(self.z-0.36)
-        #array.append(self.speed_z / 10.0)
-        
-        
-        #TODO - deal with problem that those values are reliable only once every second
+            array.append(self.wheel_velocities[j] / 3000.0)  # /150.0
+        array.append(self.z-0.36)
+        array.append(self.speed_z / 10.0)
+
+
+        # TODO - deal with problem that those values are reliable only once every second
         # for i in range(5):
         #     array.append(self.focused_distances_from_edge[i]/200.0)
-        
+
         return np.array(array)
         
     

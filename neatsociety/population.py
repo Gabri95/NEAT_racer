@@ -193,7 +193,11 @@ class Population(object):
             # fitness evaluations in cases where the fitness is known to be the same if the
             # genome doesn't change--in these cases, evaluating unmodified elites in each
             # generation is a waste of time.
-            unevaluated_population = [p for p in population if p.fitness == None]
+            if self.config.reevaluate:
+                unevaluated_population = [p for p in population]
+            else:
+                unevaluated_population = [p for p in population if p.fitness == None]            
+                
             fitness_function(unevaluated_population)
             self.total_evaluations += len(unevaluated_population)
 

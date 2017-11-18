@@ -2,7 +2,6 @@ from pytocl.driver import Driver
 from pytocl.car import State, Command
 from model import *
 import pickle
-from esn_2 import *
 import math
 import time as tm
 import sys
@@ -38,13 +37,7 @@ class MyDriver(Driver):
         print('Driver initialization completed')
        
     def drive(self, carstate: State) -> Command:
-        """
-        Produces driving command in response to newly received car state.
-
-        This is a dummy driving routine, very dumb and not really considering a
-        lot of inputs. But it will get the car (if not disturbed by other
-        drivers) successfully driven along the race track.
-        """
+        
         print('Drive')
         input = carstate.to_input_array()
         
@@ -62,6 +55,7 @@ class MyDriver(Driver):
         
         projected_speed = get_projected_speed(carstate.speed_x, carstate.speed_y, carstate.angle)
         print(tm.ctime())
+        print('iter = ', self.iterations_count)
         print('wheel velocities =', carstate.wheel_velocities)
         print('distance raced = ', carstate.distance_raced)
         # print('distances = ', carstate.distances_from_edge)
@@ -109,7 +103,7 @@ class MyDriver(Driver):
         self.offroad_penalty += (max(0, math.fabs(carstate.distance_from_center) - 0.98)) ** 2
         
         try:
-            output = self.net.activate(input)
+            output = self.net.activate(input)#input.reshape(-1, 1))
 
             for i in range(len(output)):
                 if np.isnan(output[i]):
@@ -125,6 +119,7 @@ class MyDriver(Driver):
             # self.steer(0, 0, carstate, command)
             
             self.accelerate(output[0], output[1], 0, carstate, command)
+            #self.steer(output[2], 0, carstate, command)
             self.steer(output[2], output[3], carstate, command)
 
         except OverflowError as err:

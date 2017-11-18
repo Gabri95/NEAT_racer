@@ -306,7 +306,11 @@ class Genome(object):
 
         # Create output node genes.
         for i in range(config.output_nodes):
-            act_func = choice(config.activation_functions)
+            if len(config.output_activation_functions) > 0:
+                act_func = config.output_activation_functions[i]
+            else:
+                act_func = choice(config.activation_functions)
+            
             node_gene = config.node_gene_type(node_id,
                                               node_type='OUTPUT',
                                               activation_type=act_func)
@@ -348,6 +352,35 @@ class Genome(object):
                 connections.append((hg.ID, og.ID))
 
         return connections
+        
+    def compute_full_connections_partial_recursive(self, p=0.2):
+        """ Create a fully-connected genome. """
+        in_genes = [g for g in self.node_genes.values() if g.type == 'INPUT']
+        hid_genes = [g for g in self.node_genes.values() if g.type == 'HIDDEN']
+        out_genes = [g for g in self.node_genes.values() if g.type == 'OUTPUT']
+
+        # Connect each input node to all hidden and output nodes.
+        connections = []
+        for ig in in_genes:
+            for og in hid_genes + out_genes:
+                connections.append((ig.ID, og.ID))
+
+        # Connect each hidden node to all output nodes.
+        for hg in hid_genes:
+            for og in out_genes:
+                connections.append((hg.ID, og.ID))
+        
+        recurrent = []                
+        for h1 in hid_genes:
+            for h2 in hid_genes:
+                recurrent.append((h1.ID, h2.ID))
+        for g1 in out_genes:
+            for g2 in hid_genes + out_genes:
+                recurrent.append((g1.ID, g2.ID))
+        
+        shuffle(recurrent)
+                        
+        return connections + recurrent[:int(p*len(recurrent))]
 
     def connect_full(self, innovation_indexer):
         """ Create a fully-connected genome. """
@@ -359,7 +392,12 @@ class Genome(object):
 
     def connect_partial(self, innovation_indexer, fraction):
         assert 0 <= fraction <= 1
-        all_connections = self.compute_full_connections()
+        
+        if random() < 0.35:
+            all_connections = self.compute_full_connections()
+        else:
+            all_connections = self.compute_full_connections_partial_recursive()
+        
         shuffle(all_connections)
         num_to_add = int(round(len(all_connections) * fraction))
         for input_id, output_id in all_connections[:num_to_add]:
