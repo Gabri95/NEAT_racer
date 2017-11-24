@@ -31,6 +31,9 @@ def identity_activation(z):
 
 def clamped_activation(z):
     return np.clip(z,-1.0,1.0)
+    
+def linear_logistic_activation(z):
+    return np.clip(z + 0.5,0.0,1.0)    
 
 
 def inv_activation(z):
@@ -79,7 +82,8 @@ activations = {'sigmoid':sigmoid_activation,
                'abs': abs_activation,
                'hat': hat_activation,
                'square': square_activation,
-               'cube': cube_activation}
+               'cube': cube_activation,
+               'linlog': linear_logistic_activation}
 
 
 class InvalidActivationFunction(Exception):

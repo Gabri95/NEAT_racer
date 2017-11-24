@@ -1,19 +1,18 @@
 #! /usr/bin/env python3
 
 from pytocl.main import main
+from driver1 import Driver1
+from driver2 import Driver2
 from my_driver import MyDriver
 from pytocl.driver import Driver
-from model import Model
 import argparse
 import sys
-from shutil import copyfile
-import time as tm
 import traceback
 import signal
-import time
 
 
 driver = None
+
 
 def sigterm_handler(_signo, _stack_frame):
     print('Someone killed me')
@@ -26,6 +25,8 @@ def sigterm_handler(_signo, _stack_frame):
 signal.signal(signal.SIGINT, sigterm_handler)
 signal.signal(signal.SIGTERM, sigterm_handler)
 
+registry = {'Driver1': Driver1,
+           'Driver2': Driver2}
 
 
 if __name__ == '__main__':
@@ -40,23 +41,26 @@ if __name__ == '__main__':
         help='Model parameters.',
         type=str
     )
-    # parser.add_argument(
-    #     '-n',
-    #     '--name',
-    #     help='Model name.',
-    #     type=str
-    # )
+    
     parser.add_argument(
         '-o',
         '--output_file',
         help='File where to print results.',
         type=str
     )
-    
+
     parser.add_argument(
-        '-l',
-        '--print',
-        help='Print logs instead of saving to file',
+        '-d',
+        '--driver',
+        help='Set the type of driver to use',
+        type=str,
+        default='Driver1'
+    )
+
+    parser.add_argument(
+        '-u',
+        '--unstuck',
+        help='Make the drivers automatically try to unstuck',
         action='store_true'
     )
     
@@ -64,49 +68,23 @@ if __name__ == '__main__':
     
     print(args.parameters_file)
     print(args.output_file)
-    # print(args.name)
-
+    print(args.driver)
     
-    if not args.print:
-        orig_stdout = sys.stdout
-        orig_stderr = sys.stderr
-        file_out = open('../debug/client/out.log', 'w')
-        file_err = open('../debug/client/err.log', 'w')
-        sys.stdout = file_out
-        sys.stderr = file_err
-
-
-
+    
     if args.parameters_file is not None:
-        driver = MyDriver(args.parameters_file, out_file=args.output_file)
+        driver = registry[args.driver](args.parameters_file, out_file=args.output_file, unstuck=args.unstuck)
     else:
         driver = Driver()
     
     try:
-        
         main(driver)
+        
     except Exception as exc:
         traceback.print_exc()
 
         if args.parameters_file is not None:
             driver.saveResults()
-        
-        if not args.print:
-            sys.stdout = orig_stdout
-            sys.stderr = orig_stderr
-            file_out.close()
-            file_err.close()
-
-            copyfile('../debug/client/out.log', '../debug/client/out_{}.log'.format(tm.time()))
-            copyfile('../debug/client/err.log', '../debug/client/err_{}.log'.format(tm.time()))
-        
+            
         raise
     
-    if not args.print:
-        sys.stdout = orig_stdout
-        sys.stderr = orig_stderr
-        file_out.close()
-        file_err.close()
-    
-
     

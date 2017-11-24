@@ -26,13 +26,11 @@ def main(driver):
     )
     
     parser.add_argument(
-        '-d',
+        '-f',
         '--data_file',
         help='File where to store data.',
         type=str
     )
-
-    
     
     parser.add_argument('-v', help='Debug log level.', action='store_true')
     
@@ -44,18 +42,19 @@ def main(driver):
         level = logging.DEBUG
     else:
         level = logging.INFO
+    
     del args.v
+    
     logging.basicConfig(
         level=level,
         format="%(asctime)s %(levelname)7s %(name)s %(message)s"
     )
-
-    #driver = driver_class(**args.__dict__)
     
     # start client loop:
     client = Client(driver=driver, **args.__dict__)
     client.run()
-
+    
+    
 
 if __name__ == '__main__':
 

@@ -119,7 +119,15 @@ class RecurrentNetwork(object):
         self.input_nodes = inputs
         self.output_nodes = outputs
         self.reset()
-
+    
+    def input_size(self):
+        return len(self.input_nodes)
+    
+    def output_size(self):
+        return len(self.output_nodes)
+    
+    
+    
     def reset(self):
         self.values = [[0.0] * (1 + self.max_node),
                        [0.0] * (1 + self.max_node)]

@@ -6,8 +6,10 @@ torcs-client/output
 torcs-client/pytocl/__pycache__/
 train_data/*
 debug
+config
 model_results
 neat/*
-!neat/src/
+!neat/src/*.py
 neatsociety/__pycache__
 neatsociety/nn/__pycache__
+

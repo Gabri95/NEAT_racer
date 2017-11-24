@@ -126,7 +126,7 @@ class State(Value):
     #
     #     return np.array(array)/200
     
-    def to_input_array(self):
+    def to_input_array(self, smaller=False):
 
         array = []
 
@@ -155,7 +155,7 @@ class State(Value):
         array.append(self.speed_x / 40.0)
         array.append(self.speed_y / 40.0)
 
-        for j in range(19):
+        for j in range(0, 19, 3 if smaller else 1):
             if math.fabs(self.distance_from_center) > 1 or self.distances_from_edge[j] < 0:
                 array.append(-1)
             else:
@@ -164,8 +164,8 @@ class State(Value):
         array.append(self.distance_from_center)
 
         # TODO - TO REMOVE FOR THE CIRCUIT MODEL
-        for j in range(4):
-            array.append(self.wheel_velocities[j] / 3000.0)  # /150.0
+        # for j in range(4):
+        #     array.append(self.wheel_velocities[j] / 3000.0)  # /150.0
         array.append(self.z-0.36)
         array.append(self.speed_z / 10.0)
 

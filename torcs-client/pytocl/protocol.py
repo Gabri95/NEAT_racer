@@ -5,6 +5,7 @@ import socket
 from pytocl.car import State as CarState
 from pytocl.driver import Driver
 
+#logging.basicConfig(level=3)
 _logger = logging.getLogger(__name__)
 
 # special messages from server:
@@ -50,15 +51,17 @@ class Client:
 
     def run(self):
         """Enters cyclic execution of the client network interface."""
-
+        
         if self.state is State.STOPPED:
+            
             _logger.debug('Starting cyclic execution.')
-
+    
             self.state = State.STARTING
 
             try:
                 _logger.info('Registering driver client with server {}.'
                              .format(self.hostaddr))
+                    
                 self._configure_udp_socket()
                 self._register_driver()
                 self.state = State.RUNNING
@@ -67,7 +70,7 @@ class Client:
             except socket.error as ex:
                 _logger.error('Cannot connect to server: {}'.format(ex))
                 self.state = State.STOPPED
-
+        
         while self.state is State.RUNNING:
             self._process_server_msg()
 
@@ -140,7 +143,6 @@ class Client:
                 sensor_dict = self.serializer.decode(buffer)
                 carstate = CarState(sensor_dict)
                 _logger.debug(carstate)
-
                 command = self.driver.drive(carstate)
                 
                 if self.data_file is not None:
